@@ -28,7 +28,7 @@ Extract the downloaded mujoco210 directory into `~/.mujoco/mujoco210`.
 
 First create a conda env with name `ibrl`.
 ```shell
-conda create --name ibrl python=3.9
+conda create --name ibrl_v2 python=3.10
 ```
 
 Then, source `set_env.sh` to activate `ibrl` conda env. It also setup several important paths such as `MUJOCO_PY_MUJOCO_PATH` and add current project folder to `PYTHONPATH`.
@@ -58,6 +58,8 @@ We have a C++ module in the common utils that requires compilation
 cd common_utils
 make
 ```
+
+### Clone and Install LeRobot in the same Conda Environment
 
 ### Trouble Shooting
 Later when running the training commands, if we encounter the following error
