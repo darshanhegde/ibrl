@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from dataclasses import dataclass, field
@@ -7,15 +8,22 @@ from typing import Optional
 import pyrallis
 import torch
 import numpy as np
+from pathlib import Path
 
 import common_utils
 from common_utils import ibrl_utils as utils
 from evaluate import run_eval, run_eval_mp
 from env.robosuite_wrapper import PixelRobosuite
 from env.pusht_wrapper import PushtWrapper
-from rl.q_agent import QAgent, QAgentConfig
+from rl.residual_q_agent import ResidualQAgent, ResidualQAgentConfig
 from rl import replay
 import train_bc
+
+from huggingface_hub import snapshot_download
+from huggingface_hub.utils._errors import RepositoryNotFoundError
+from huggingface_hub.utils._validators import HFValidationError
+from lerobot.common.utils.utils import get_safe_torch_device, init_hydra_config, init_logging, set_global_seed
+from lerobot.common.policies.factory import make_policy
 
 
 @dataclass
@@ -34,7 +42,8 @@ class MainConfig(common_utils.RunConfig):
     state_stack: int = 1
     # agent
     use_state: int = 0
-    q_agent: QAgentConfig = field(default_factory=lambda: QAgentConfig())
+    base_policy_name: str = ""
+    q_agent: ResidualQAgentConfig = field(default_factory=lambda: ResidualQAgentConfig())
     stddev_max: float = 1.0
     stddev_min: float = 0.1
     stddev_step: int = 500000
@@ -104,7 +113,35 @@ class MainConfig(common_utils.RunConfig):
     @property
     def stddev_schedule(self):
         return f"linear({self.stddev_max},{self.stddev_min},{self.stddev_step})"
+    
 
+def read_base_policy(pretrained_policy_name):
+    try:
+        pretrained_policy_path = Path(
+            snapshot_download(pretrained_policy_name, revision=None)
+        )
+    except (HFValidationError, RepositoryNotFoundError) as e:
+        if isinstance(e, HFValidationError):
+            error_message = (
+                "The provided pretrained_policy_name is not a valid Hugging Face Hub repo ID."
+            )
+        else:
+            error_message = (
+                "The provided pretrained_policy_name was not found on the Hugging Face Hub."
+            )
+        logging.warning(f"{error_message} Treating it as a local directory.")
+        if not pretrained_policy_path.is_dir() or not pretrained_policy_path.exists():
+            raise ValueError(
+                "The provided pretrained_policy_name_or_path is not a valid/existing Hugging Face Hub "
+                "repo ID, nor is it an existing local directory."
+            )
+        
+        hydra_cfg = init_hydra_config(str(pretrained_policy_path / "config.yaml"), config_overrides=None)
+        policy = make_policy(hydra_cfg=hydra_cfg, pretrained_policy_name_or_path=str(pretrained_policy_path))
+        policy.eval()
+        return policy
+
+    
 
 class Workspace:
     def __init__(self, cfg: MainConfig, from_main=True):
@@ -129,8 +166,12 @@ class Workspace:
         self.train_step = 0
         self._setup_env_pusht()
 
+        # read base policy
+        base_policy = read_base_policy(cfg.base_policy_name)
+
         print(self.train_env.observation_shape)
-        self.agent = QAgent(
+        self.agent = ResidualQAgent(
+            base_policy,
             self.cfg.use_state,
             self.train_env.observation_shape,
             self.train_env.prop_shape,
@@ -216,11 +257,11 @@ class Workspace:
 
     def _setup_env_pusht(self):
         self.train_env = PushtWrapper(
-            obs_type="state",
+            obs_type="environment_state_agent_pos",
             env_reward_scale=self.cfg.env_reward_scale,
         )
         self.eval_env_params = dict(
-            obs_type="state",
+            obs_type="environment_state_agent_pos",
             env_reward_scale=self.cfg.env_reward_scale,
         )
         self.eval_env = PushtWrapper(**self.eval_env_params)  # type: ignore

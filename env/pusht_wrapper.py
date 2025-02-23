@@ -1,6 +1,7 @@
 import gymnasium as gym
 import gym_pusht
 
+import numpy as np
 import torch
 
 
@@ -20,7 +21,10 @@ class PushtWrapper:
 
     @property
     def observation_shape(self):
-        return self.env.observation_space.shape
+        # loop thrpough observation_space keys and add up box dimnensions
+        obs_space = self.env.observation_space.spaces
+        return (obs_space["environment_state"].shape[0] + obs_space["agent_pos"].shape[0],)
+        
     
     @property
     def prop_shape(self):
@@ -37,11 +41,12 @@ class PushtWrapper:
         self.terminal = False
     
         state_obs, info = self.env.reset()
+        # concatenate all observations
+        concat_obs = np.concatenate([state_obs["environment_state"], state_obs["agent_pos"]])
 
         rl_obs = {}
-        state_obs = torch.from_numpy(state_obs).float().to(self.device)
-        rl_obs["state"] = state_obs
-        return rl_obs, rl_obs
+        rl_obs["state"] = torch.from_numpy(concat_obs).float().to(self.device)
+        return rl_obs, state_obs
     
     def step(self, actions: torch.Tensor) -> tuple[dict, float, bool, bool, dict]:
         """
@@ -54,16 +59,15 @@ class PushtWrapper:
         success = False
         terminal = False
         rl_obs = {}
-        high_res_images = {}
+        curr_state_obs = {}
         for i in range(num_action):
             self.time_step += 1
             obs, step_reward, terminal, _, info = self.env.step(actions[i])
-            # NOTE: extract images every step for potential obs stacking
-            # this is not efficient
-            curr_rl_obs, curr_high_res_images = {"state": torch.from_numpy(obs).float().to(self.device)}, {"state": torch.from_numpy(obs).float().to(self.device)}
+            concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"]])
+            curr_rl_obs, curr_state_obs = {"state": torch.from_numpy(concat_obs).float().to(self.device)}, obs
             if i == num_action - 1:
                 rl_obs.update(curr_rl_obs)
-                high_res_images.update(curr_high_res_images)
+                curr_state_obs.update(curr_state_obs)
 
             reward += step_reward
             self.episode_reward += step_reward
@@ -81,4 +85,19 @@ class PushtWrapper:
 
         reward = reward * self.env_reward_scale
         self.terminal = terminal
-        return rl_obs, reward, terminal, success, high_res_images
+        return rl_obs, reward, terminal, success, curr_state_obs
+    
+
+def main():
+    env = PushtWrapper("environment_state_agent_pos")
+    obs, _ = env.reset()
+    import pdb; pdb.set_trace()
+    for _ in range(100):
+        obs, reward, terminal, success, _ = env.step(torch.zeros((1, 2)))
+        if terminal:
+            break
+
+
+
+if __name__ == "__main__":
+    main()
