@@ -16,7 +16,8 @@ We need `--recursive` to get the correct submodule
 ```shell
 mkdir -p cs381
 cd cs381
-git clone --recursive https://github.com/hengyuan-hu/ibrl.git
+git clone --recursive git@github.com:darshanhegde/ibrl.git
+git checkout feat-residual-rl
 ```
 
 ### Install dependencies
