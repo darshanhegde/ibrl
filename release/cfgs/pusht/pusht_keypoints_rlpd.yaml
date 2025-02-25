@@ -9,11 +9,10 @@ num_warm_up_episode: 40
 num_train_step: 200000
 replay_buffer_size: 1000
 use_wb: 1
-mp_eval: 1
+mp_eval: 0
 log_per_step: 10000
 num_eval_episode: 50
 num_critic_update: 5
-base_policy_name: lerobot/diffusion_pusht_keypoints
 q_agent:
   act_method: "rl"
   state_critic:

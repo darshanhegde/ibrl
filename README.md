@@ -14,6 +14,8 @@ Implementation of _Imitation Bootstrapped Reinforcement Learning (IBRL)_ and bae
 ### Clone the repo.
 We need `--recursive` to get the correct submodule
 ```shell
+mkdir -p cs381
+cd cs381
 git clone --recursive https://github.com/hengyuan-hu/ibrl.git
 ```
 
@@ -61,6 +63,22 @@ make
 
 ### Clone and Install LeRobot in the same Conda Environment
 
+Using the same environment `ibrl_v2` install dependecies of lerobot at a specific commit. 
+
+```
+cd cs381
+git clone https://github.com/huggingface/lerobot
+cd lerobot
+git checkout cc2f6e74047bd65db0f9705fa602636b625bc28c
+```
+
+Install the dependies
+```
+cd cs381/lerobot
+pip install -e .
+pip install -e ".[aloha, pusht]"
+```
+
 ### Trouble Shooting
 Later when running the training commands, if we encounter the following error
 ```shell
@@ -77,6 +95,12 @@ ln -sf /lib/x86_64-linux-gnu/libstdc++.so.6 PATH_TO_CONDA_ENV/bin/../lib/libstdc
 ## Reproduce Results
 
 Remember to run `source set_env.sh`  once per shell before running any script from this repo.
+
+## Residual RL Training on Push-T Keypoints Environment
+
+```
+python train_residual_rl.py --config_path release/cfgs/pusht/pusht_keypoints_rlpd.yaml 
+```
 
 
 ### Download data and BC models

@@ -3,6 +3,7 @@ import numpy as np
 from common_utils import Recorder, Stopwatch
 from common_utils import ibrl_utils as utils
 from env.robosuite_wrapper import PixelRobosuite
+from env.pusht_wrapper import PushtWrapper
 
 
 def run_eval(
@@ -19,7 +20,7 @@ def run_eval(
     stopwatch = Stopwatch()
     recorder = None if record_dir is None else Recorder(record_dir)
 
-    env = PixelRobosuite(**env_params)
+    env = PushtWrapper(**env_params)
     with torch.no_grad(), utils.eval_mode(agent):
         for episode_idx in range(num_game):
             step = 0

@@ -30,14 +30,14 @@ class EvalProc:
         results = {}
         for seed in self.seeds:
             np.random.seed(seed)
-            obs, _ = env.reset()
+            obs, info = env.reset()
             success = False
             while not env.terminal:
                 # NOTE: obs["obs"] should be a cpu tensor because it
                 # is more complicated to move cuda tensors around.
-                self.send_queue.put((self.process_id, obs))
+                self.send_queue.put((self.process_id, obs, info))
                 action = self.recv_queue.get()
-                obs, _, _, success, _ = env.step(action)
+                obs, _, _, success, info = env.step(action)
 
             results[seed] = float(success)
 
