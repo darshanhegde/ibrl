@@ -43,7 +43,9 @@ def make_base_policy(pretrained_policy_name):
 
 class PushtWrapper:
 
-    def __init__(self, obs_type, render_mode="rgb_array", device='cuda', env_reward_scale=1.0, end_on_success=True): 
+    def __init__(self, obs_type, render_mode="rgb_array", device='cuda', 
+                 env_reward_scale=1.0, end_on_success=True, 
+                 env_action_scale=16): 
         self.obs_type = obs_type
         self.device = device
         self.env = gym.make("gym_pusht/PushT-v0", obs_type=obs_type, render_mode=render_mode)
@@ -57,6 +59,7 @@ class PushtWrapper:
 
         self.base_policy = make_base_policy("lerobot/diffusion_pusht_keypoints")
         self.next_action = None
+        self.action_scale = env_action_scale
 
     @property
     def observation_shape(self):
@@ -106,6 +109,9 @@ class PushtWrapper:
         """
         num_action = actions.size(0)
         actions = actions.to("cpu").numpy()
+
+        # scale actions coming from the policy
+        actions = (actions + 1) * self.action_scale
 
         reward = 0
         success = False

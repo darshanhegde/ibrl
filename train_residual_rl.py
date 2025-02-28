@@ -251,18 +251,28 @@ class Workspace:
         )
 
         if self.cfg.preload_num_data:
-            replay.add_demos_to_replay(
-                self.replay,
-                self.cfg.preload_datapath,
-                num_data=self.cfg.preload_num_data,
-                rl_cameras=self.rl_cameras,
-                use_state=self.cfg.use_state,
-                obs_stack=self.obs_stack,
-                state_stack=self.cfg.state_stack,
-                prop_stack=self.prop_stack,
-                reward_scale=self.cfg.env_reward_scale,
-                record_sim_state=bool(self.cfg.save_per_success > 0),
-            )
+            print("Preloading data ...")
+            obs, _ = self.train_env.reset()
+            self.replay.new_episode(obs)
+            total_reward = 0
+            num_episode = 0
+            while True:
+                action = -1.0 * torch.ones(self.train_env.action_dim)
+                obs, reward, terminal, success, info = self.train_env.step(action)
+                reply = {"action": action}
+                self.replay.add(obs, reply, reward, terminal, success, info)
+
+                if terminal:
+                    num_episode += 1
+                    total_reward += self.train_env.episode_reward
+                    if num_episode < self.cfg.preload_num_data:
+                        self.replay.new_episode(obs)
+                        obs, _ = self.train_env.reset()
+                    else:
+                        break
+            print(f"Preload of imitation data done. #episode: {self.replay.size()}")
+            print(f"#episode from pre-load: {num_episode}, #reward: {total_reward}")
+            
         if self.cfg.freeze_bc_replay:
             assert self.cfg.save_per_success <= 0, "cannot save a non-growing replay"
             self.replay.freeze_bc_replay = True
@@ -321,8 +331,8 @@ class Workspace:
                 num_episode += 1
                 total_reward += self.train_env.episode_reward
                 if self.replay.size() < self.cfg.num_warm_up_episode:
-                    self.replay.new_episode(obs)
                     obs, _ = self.train_env.reset()
+                    self.replay.new_episode(obs)
                 else:
                     break
 

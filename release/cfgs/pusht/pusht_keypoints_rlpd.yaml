@@ -1,10 +1,10 @@
 task_name: "Push-T-Keypoints"
-episode_length: 400
+episode_length: 300
 stddev_max: 0.1
 use_state: 1
 state_stack: 3
-mix_rl_rate: 1.0
-preload_num_data: 0
+mix_rl_rate: 0.5
+preload_num_data: 40
 num_warm_up_episode: 40
 num_train_step: 200000
 replay_buffer_size: 1000
