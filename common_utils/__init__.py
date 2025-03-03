@@ -9,4 +9,4 @@ from .py.data_aug import *
 from .py.record import Recorder
 from .py.run_cfg import RunConfig
 from .py import ibrl_utils as ibrl_utils
-from .build import rela
+#from .build import rela

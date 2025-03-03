@@ -1,53 +1,62 @@
-import gymnasium as gym
-import gym_pusht
+# NOTE: this is for aloha keypoints (not image, since no pre-trained model exists for image atm)
 
+import gymnasium as gym
+import gym_aloha
 import logging
 import numpy as np
 import torch
 from pathlib import Path
 
 from lerobot.common.envs.utils import preprocess_observation
-
 from huggingface_hub import snapshot_download
 #from huggingface_hub.utils._errors import RepositoryNotFoundError
-from huggingface_hub.utils._validators import HFValidationError
-from lerobot.common.utils.utils import get_safe_torch_device, init_hydra_config, init_logging, set_global_seed
+#from huggingface_hub.utils._validators import HFValidationError
+from lerobot.common.utils.utils import get_safe_torch_device #init_hydra_config, init_logging, set_global_seed
 from lerobot.common.policies.factory import make_policy
 
+from transformers import AutoModel
 
-def make_base_policy(pretrained_policy_name):
-    try:
-        pretrained_policy_path = Path(
-            snapshot_download(pretrained_policy_name, revision=None)
+def make_base_policy(pretrained_policy_name, device):
+    #try:
+    pretrained_policy_path = Path(snapshot_download(pretrained_policy_name, revision=None))
+    print(pretrained_policy_path)
+    # except (HFValidationError, RepositoryNotFoundError) as e:
+    #     if isinstance(e, HFValidationError):
+    #         error_message = "Invalid Hugging Face Hub repo ID."
+    #     else:
+    #         error_message = "Repo not found on Hugging Face Hub."
+    #     logging.warning(f"{error_message} Treating it as a local directory.")
+    #     if not pretrained_policy_path.is_dir() or not pretrained_policy_path.exists():
+    #         raise ValueError("Invalid Hugging Face repo or nonexistent local directory.")
+
+    # NOTE: current implementation does NOT use diffusion/have config.yaml so no hydra needed
+    # hydra_cfg = init_hydra_config(str(pretrained_policy_path / "config.yaml"))
+    # policy = make_policy(hydra_cfg=hydra_cfg, pretrained_policy_name_or_path=str(pretrained_policy_path))
+
+    from omegaconf import OmegaConf
+
+    # Create an empty configuration
+    hydra_cfg = OmegaConf.create()
+
+    # Set the desired policy name
+    hydra_cfg.policy = OmegaConf.create()
+    hydra_cfg.policy.name = "act"
+    hydra_cfg.device = device
+
+    device = get_safe_torch_device(device)
+    policy = make_policy(
+            hydra_cfg=hydra_cfg,
+            pretrained_policy_name_or_path=pretrained_policy_name,
         )
-    except:
-        # if isinstance(e, HFValidationError):
-        #     error_message = (
-        #         "The provided pretrained_policy_name is not a valid Hugging Face Hub repo ID."
-        #     )
-        # else:
-        #     error_message = (
-        #         "The provided pretrained_policy_name was not found on the Hugging Face Hub."
-        #     )
-        # logging.warning(f"{error_message} Treating it as a local directory.")
-        # if not pretrained_policy_path.is_dir() or not pretrained_policy_path.exists():
-        #     raise ValueError(
-        #         "The provided pretrained_policy_name_or_path is not a valid/existing Hugging Face Hub "
-        #         "repo ID, nor is it an existing local directory."
-        #     )
-        pass 
-        
-    hydra_cfg = init_hydra_config(str(pretrained_policy_path / "config.yaml"))
-    policy = make_policy(hydra_cfg=hydra_cfg, pretrained_policy_name_or_path=str(pretrained_policy_path))
     policy.eval()
     return policy
 
-class PushtWrapper:
 
+class AlohaInsertionWrapper:
     def __init__(self, obs_type, render_mode="rgb_array", device='cuda', env_reward_scale=1.0, end_on_success=True): 
         self.obs_type = obs_type
         self.device = device
-        self.env = gym.make("gym_pusht/PushT-v0", obs_type=obs_type, render_mode=render_mode)
+        self.env = gym.make("gym_aloha/AlohaInsertion-v0", obs_type="pixels_agent_pos", render_mode=render_mode)  # Change env
         self.env_reward_scale = env_reward_scale
         self.time_step = 0
         self.episode_reward = 0
@@ -56,18 +65,16 @@ class PushtWrapper:
         self.terminal = True
         self.max_steps = 400
 
-        self.base_policy = make_base_policy("lerobot/diffusion_pusht_keypoints")
+        self.base_policy = make_base_policy("lerobot/act_aloha_sim_insertion_human", device)  # Change policy
         self.next_action = None
 
     @property
     def observation_shape(self):
-        # loop thrpough observation_space keys and add up box dimnensions
         obs_space = self.env.observation_space.spaces
-        observation_shape = (obs_space["environment_state"].shape[0] + 2 * obs_space["agent_pos"].shape[0],) 
+        observation_shape = (obs_space["pixels"]["top"].shape[0] + 2 * obs_space["agent_pos"].shape[0],) 
         print("Using observation shape: ", observation_shape)
         return observation_shape
         
-    
     @property
     def prop_shape(self):
         return self.env.action_space.shape
@@ -77,6 +84,7 @@ class PushtWrapper:
         return self.env.action_space.shape[0]
     
     def run_base_policy(self, raw_obs: dict[str, np.array]):
+        #print(f"Raw: {raw_obs}")
         observation = preprocess_observation(raw_obs)
         print(f"KEYS after preprocess: {observation.keys()}")
         observation = {key: observation[key].unsqueeze(0).to(self.device, non_blocking=True) for key in observation}
@@ -91,15 +99,21 @@ class PushtWrapper:
         self.episode_extra_reward = 0
         self.terminal = False
     
-        self.base_policy.reset()
+        # NOTE: removed since ViT has no attribute 'reset'
+        #self.base_policy.reset()
         obs, info = self.env.reset()
+        observation = preprocess_observation(obs)
+        print(observation.keys())
+
+        print(obs.keys())
         base_action = self.run_base_policy(obs)
         self.next_action = base_action
-        # concatenate all observations
-        print(obs["environment_state"].shape)
+        print(obs["pixels"]["top"].shape)
         print(obs["agent_pos"].shape)
         print(base_action.shape)
-        concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"], base_action])
+        print(obs.keys())
+        print(observation["observation.state"])
+        concat_obs = np.concatenate([observation["observation.state"], obs["agent_pos"], base_action])
         print(concat_obs.shape)
 
         rl_obs = {}
@@ -126,13 +140,17 @@ class PushtWrapper:
             base_action = self.run_base_policy(obs)
             self.next_action = base_action
 
-            concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"], base_action])
+            print(obs["pixels"]["top"].shape)
+            print(obs["agent_pos"].shape)
+            observation = preprocess_observation(obs)
+
+
+            concat_obs = np.concatenate([observation["observation.state"], obs["agent_pos"], base_action])
             curr_rl_obs = {}
             curr_rl_obs["state"] = torch.from_numpy(concat_obs).float().to(self.device)
             if i == num_action - 1:
                 rl_obs.update(curr_rl_obs)
                 
-
             reward += step_reward
             self.episode_reward += step_reward
 
@@ -157,7 +175,7 @@ class PushtWrapper:
     
 
 def main():
-    env = PushtWrapper("environment_state_agent_pos", render_mode="human")
+    env = AlohaInsertionWrapper("pixels_agent_pos", render_mode="human")
     obs, _ = env.reset()
     print(obs['state'].shape)
     env.render()
