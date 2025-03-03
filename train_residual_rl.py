@@ -256,14 +256,19 @@ class Workspace:
             self.replay.new_episode(obs)
             total_reward = 0
             num_episode = 0
+            num_scuccess = 0
+            cum_success = False
             while True:
                 action = -1.0 * torch.ones(self.train_env.action_dim)
                 obs, reward, terminal, success, info = self.train_env.step(action)
                 reply = {"action": action}
                 self.replay.add(obs, reply, reward, terminal, success, info)
+                cum_success = success or cum_success 
 
                 if terminal:
                     num_episode += 1
+                    if success: 
+                        num_scuccess += 1
                     total_reward += self.train_env.episode_reward
                     if num_episode < self.cfg.preload_num_data:
                         self.replay.new_episode(obs)
@@ -272,6 +277,7 @@ class Workspace:
                         break
             print(f"Preload of imitation data done. #episode: {self.replay.size()}")
             print(f"#episode from pre-load: {num_episode}, #reward: {total_reward}")
+            print(f"#success from pre-load: {num_scuccess}, #success rate: {num_scuccess / num_episode}")
             
         if self.cfg.freeze_bc_replay:
             assert self.cfg.save_per_success <= 0, "cannot save a non-growing replay"
@@ -310,6 +316,8 @@ class Workspace:
         self.replay.new_episode(obs)
         total_reward = 0
         num_episode = 0
+        num_success = 0
+        cum_success = False
         while True:
             if self.bc_policy is not None:
                 # we have a BC policy
@@ -324,11 +332,15 @@ class Workspace:
                 action = action.uniform_(-1.0, 1.0)
 
             obs, reward, terminal, success, info = self.train_env.step(action)
+            cum_success = success or cum_success
             reply = {"action": action}
             self.replay.add(obs, reply, reward, terminal, success, info)
 
+
             if terminal:
                 num_episode += 1
+                if success:
+                    num_success += 1
                 total_reward += self.train_env.episode_reward
                 if self.replay.size() < self.cfg.num_warm_up_episode:
                     obs, _ = self.train_env.reset()
@@ -338,6 +350,7 @@ class Workspace:
 
         print(f"Warm up done. #episode: {self.replay.size()}")
         print(f"#episode from warmup: {num_episode}, #reward: {total_reward}")
+        print(f"#success from warmup: {num_success}, #success rate: {num_success / num_episode}")
 
     def train(self):
         stat = common_utils.MultiCounter(
@@ -349,7 +362,7 @@ class Workspace:
             config=self.cfg_dict,
         )
         self.agent.set_stats(stat)
-        saver = common_utils.TopkSaver(save_dir=self.work_dir, topk=1)
+        saver = common_utils.TopkSaver(save_dir=self.work_dir, topk=5)
 
         if self.replay.num_episode < self.cfg.num_warm_up_episode:
             self.warm_up()

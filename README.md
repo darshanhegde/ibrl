@@ -80,6 +80,28 @@ pip install -e .
 pip install -e ".[aloha, pusht]"
 ```
 
+
+# Training residual policy
+
+```
+python train_residual_rl.py --config_path release/cfgs/pusht/pusht_keypoints_rlpd.yaml
+```
+
+
+# Evaluating baseline policy
+
+```
+python eval_base_policy_miminal.py 
+```
+
+
+# Evaluating residual trained policy
+
+```
+python evaluate/eval.py --folder exps/rl/run1 --mode rl --mp 0 --num_game 200
+```
+
+
 ### Trouble Shooting
 Later when running the training commands, if we encounter the following error
 ```shell

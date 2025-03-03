@@ -55,7 +55,7 @@ class PushtWrapper:
         self.episode_extra_reward = 0
         self.end_on_success = end_on_success
         self.terminal = True
-        self.max_steps = 400
+        self.max_steps = 300
 
         self.base_policy = make_base_policy("lerobot/diffusion_pusht_keypoints")
         self.next_action = None
@@ -131,15 +131,17 @@ class PushtWrapper:
             curr_rl_obs["state"] = torch.from_numpy(concat_obs).float().to(self.device)
             if i == num_action - 1:
                 rl_obs.update(curr_rl_obs)
-                
 
-            reward += step_reward
-            self.episode_reward += step_reward
-
-            if step_reward == 1:
+            if step_reward >= 0.95:
+                step_reward = 1
                 success = True
                 if self.end_on_success:
                     terminal = True
+            else: 
+                step_reward = 0
+
+            reward += step_reward
+            self.episode_reward += step_reward
 
             if terminal:
                 rl_obs.update(curr_rl_obs)
