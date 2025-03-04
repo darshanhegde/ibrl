@@ -39,7 +39,6 @@ def run_eval(
                     action = agent.act(obs, eval_mode=eval_mode)
 
                 with stopwatch.time("step"):
-                    print("Action from residual RL: ", action)  
                     obs, reward, terminal, success, image_obs = env.step(action)
 
                 accum_success = accum_success or success 
