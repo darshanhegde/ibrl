@@ -124,7 +124,6 @@ class PushtWrapper:
             obs, step_reward, terminal, _, info = self.env.step(final_action)
 
             base_action = self.run_base_policy(obs)
-            print("Delta action: ", final_action - base_action)
             self.next_action = base_action
 
             concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"], base_action])
