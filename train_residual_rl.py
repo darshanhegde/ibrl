@@ -259,7 +259,7 @@ class Workspace:
             num_scuccess = 0
             cum_success = False
             while True:
-                action = -1.0 * torch.ones(self.train_env.action_dim)
+                action = torch.zeros(self.train_env.action_dim)
                 obs, reward, terminal, success, info = self.train_env.step(action)
                 reply = {"action": action}
                 self.replay.add(obs, reply, reward, terminal, success, info)
