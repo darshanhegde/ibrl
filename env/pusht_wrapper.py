@@ -45,7 +45,7 @@ class PushtWrapper:
 
     def __init__(self, obs_type, render_mode="rgb_array", device='cuda', 
                  env_reward_scale=1.0, end_on_success=True, 
-                 env_action_scale=16): 
+                 env_action_scale=8): 
         self.obs_type = obs_type
         self.device = device
         self.env = gym.make("gym_pusht/PushT-v0", obs_type=obs_type, render_mode=render_mode)
@@ -111,7 +111,7 @@ class PushtWrapper:
         actions = actions.to("cpu").numpy()
 
         # scale actions coming from the policy
-        actions = (actions + 1) * self.action_scale
+        actions = actions * self.action_scale
 
         reward = 0
         success = False
@@ -124,6 +124,7 @@ class PushtWrapper:
             obs, step_reward, terminal, _, info = self.env.step(final_action)
 
             base_action = self.run_base_policy(obs)
+            print("Delta action: ", final_action - base_action)
             self.next_action = base_action
 
             concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"], base_action])
