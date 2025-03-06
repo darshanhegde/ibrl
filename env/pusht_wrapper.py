@@ -45,7 +45,7 @@ class PushtWrapper:
 
     def __init__(self, obs_type, render_mode="rgb_array", device='cuda', 
                  env_reward_scale=1.0, end_on_success=True, 
-                 env_action_scale=8): 
+                 env_action_scale=16): 
         self.obs_type = obs_type
         self.device = device
         self.env = gym.make("gym_pusht/PushT-v0", obs_type=obs_type, render_mode=render_mode)
@@ -107,7 +107,6 @@ class PushtWrapper:
         """
         all inputs and outputs are tensors
         """
-        num_action = actions.size(0)
         actions = actions.to("cpu").numpy()
 
         # scale actions coming from the policy
@@ -118,34 +117,29 @@ class PushtWrapper:
         terminal = False
         info = {}
         rl_obs = {}
-        for i in range(num_action):
-            self.time_step += 1
-            final_action = self.next_action + actions[i]
-            obs, step_reward, terminal, _, info = self.env.step(final_action)
+        self.time_step += 1
+        final_action = self.next_action + actions
 
-            base_action = self.run_base_policy(obs)
-            self.next_action = base_action
+        obs, step_reward, terminal, _, info = self.env.step(final_action)
 
-            concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"], base_action])
-            curr_rl_obs = {}
-            curr_rl_obs["state"] = torch.from_numpy(concat_obs).float().to(self.device)
-            if i == num_action - 1:
-                rl_obs.update(curr_rl_obs)
+        base_action = self.run_base_policy(obs)
+        self.next_action = base_action
 
-            if step_reward >= 0.95:
-                step_reward = 1
-                success = True
-                if self.end_on_success:
-                    terminal = True
-            else: 
-                step_reward = 0
+        concat_obs = np.concatenate([obs["environment_state"], obs["agent_pos"], base_action])
+        curr_rl_obs = {}
+        curr_rl_obs["state"] = torch.from_numpy(concat_obs).float().to(self.device)
+        rl_obs.update(curr_rl_obs)
 
-            reward += step_reward
-            self.episode_reward += step_reward
+        if step_reward >= 0.95:
+            step_reward = 1
+            success = True
+            if self.end_on_success:
+                terminal = True
+        else: 
+            step_reward = 0
 
-            if terminal:
-                rl_obs.update(curr_rl_obs)
-                break
+        reward += step_reward
+        self.episode_reward += step_reward
 
         if self.time_step >= self.max_steps:
             terminal = True

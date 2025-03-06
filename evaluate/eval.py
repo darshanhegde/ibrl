@@ -20,6 +20,7 @@ def run_eval(
     stopwatch = Stopwatch()
     recorder = None if record_dir is None else Recorder(record_dir)
 
+    # env_params["render_mode"] = "human"
     env = PushtWrapper(**env_params)
     with torch.no_grad(), utils.eval_mode(agent):
         for episode_idx in range(num_game):
@@ -38,12 +39,15 @@ def run_eval(
                 with stopwatch.time(f"act"):
                     action = agent.act(obs, eval_mode=eval_mode)
 
+                # print("Residual RL action:", action)
                 with stopwatch.time("step"):
                     obs, reward, terminal, success, image_obs = env.step(action)
 
                 accum_success = accum_success or success 
                 rewards.append(reward)
                 step += 1
+
+                # env.render()
 
             if verbose:
                 print(
