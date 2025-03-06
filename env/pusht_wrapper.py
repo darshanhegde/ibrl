@@ -112,6 +112,8 @@ class PushtWrapper:
         # scale actions coming from the policy
         actions = actions * self.action_scale
 
+        # print("Actions: ", actions)
+
         reward = 0
         success = False
         terminal = False

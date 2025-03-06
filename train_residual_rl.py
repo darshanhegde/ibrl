@@ -59,6 +59,7 @@ class MainConfig(common_utils.RunConfig):
     add_bc_loss: int = 0
     # others
     env_reward_scale: float = 1
+    env_action_scale: float = 16
     num_warm_up_episode: int = 50
     num_eval_episode: int = 10
     save_per_success: int = -1
@@ -218,10 +219,12 @@ class Workspace:
         self.train_env = PushtWrapper(
             obs_type="environment_state_agent_pos",
             env_reward_scale=self.cfg.env_reward_scale,
+            env_action_scale=self.cfg.env_action_scale
         )
         self.eval_env_params = dict(
             obs_type="environment_state_agent_pos",
             env_reward_scale=self.cfg.env_reward_scale,
+            env_action_scale=self.cfg.env_action_scale
         )
         self.eval_env = PushtWrapper(**self.eval_env_params)  # type: ignore
 

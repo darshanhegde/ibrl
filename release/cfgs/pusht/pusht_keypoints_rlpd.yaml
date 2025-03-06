@@ -13,7 +13,8 @@ mp_eval: 0
 log_per_step: 10000
 num_eval_episode: 200
 num_critic_update: 5
-save_dir: exps/rl/push_t_keypoints_rlpd_scale_16
+env_action_scale: 4
+save_dir: exps/rl/push_t_keypoints_rlpd_scale_4
 q_agent:
   act_method: "rl"
   state_critic:
