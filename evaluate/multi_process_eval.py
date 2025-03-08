@@ -11,7 +11,7 @@ if mp.get_start_method(allow_none=True) != "spawn":
 import common_utils
 from common_utils import ibrl_utils as utils
 from env.robosuite_wrapper import PixelRobosuite
-from env.pusht_wrapper import PushtWrapper
+from env.pusht_image_wrapper import PushtImageWrapper
 
 
 class EvalProc:
@@ -25,7 +25,7 @@ class EvalProc:
 
     def start(self):
         # env = PixelRobosuite(**self.env_params)
-        env = PushtWrapper(**self.env_params)
+        env = PushtImageWrapper(**self.env_params)
 
         results = {}
         for seed in self.seeds:
