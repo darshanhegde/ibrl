@@ -1,3 +1,6 @@
+# Add the following (green) in lerobot/common/envs/utils.py
+![image](https://github.com/user-attachments/assets/4a60d3b0-f0cb-4f5a-9b1f-027bbede1cdc)
+
 # Imitation Bootstrapped Reinforcement Learning
 
 Implementation of _Imitation Bootstrapped Reinforcement Learning (IBRL)_ and baeslines (RLPD, RFT) on Robomimic and Meta-World Tasks.

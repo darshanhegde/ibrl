@@ -13,7 +13,7 @@ import common_utils
 from common_utils import ibrl_utils as utils
 from evaluate import run_eval, run_eval_mp
 from env.robosuite_wrapper import PixelRobosuite
-from env.pusht_wrapper import PushtWrapper
+from env.pusht_image_wrapper import PushtImageWrapper
 from rl.q_agent import QAgent, QAgentConfig
 from rl import replay
 import train_bc
@@ -28,7 +28,7 @@ class MainConfig(common_utils.RunConfig):
     # render image in higher resolution for recording or using pretrained models
     image_size: int = 224
     rl_image_size: int = 96
-    rl_camera: str = "robot0_eye_in_hand"
+    rl_camera: str = "image" #robot0_eye_in_hand"
     obs_stack: int = 1
     prop_stack: int = 1
     state_stack: int = 1
@@ -216,17 +216,17 @@ class Workspace:
         self.eval_env = PixelRobosuite(**self.eval_env_params)  # type: ignore
 
     def _setup_env_pusht(self):
-        self.train_env = PushtWrapper(
-            obs_type="environment_state_agent_pos",
+        self.train_env = PushtImageWrapper(
+            obs_type="pixels_agent_pos",
             env_reward_scale=self.cfg.env_reward_scale,
             env_action_scale=self.cfg.env_action_scale
         )
         self.eval_env_params = dict(
-            obs_type="environment_state_agent_pos",
+            obs_type="pixels_agent_pos",
             env_reward_scale=self.cfg.env_reward_scale,
             env_action_scale=self.cfg.env_action_scale
         )
-        self.eval_env = PushtWrapper(**self.eval_env_params)  # type: ignore
+        self.eval_env = PushtImageWrapper(**self.eval_env_params)  # type: ignore
 
         self.obs_stack = self.cfg.obs_stack
         self.prop_stack = self.cfg.prop_stack
@@ -270,6 +270,7 @@ class Workspace:
 
                 if terminal:
                     num_episode += 1
+                    print("Episode: ", num_episode)
                     if success: 
                         num_scuccess += 1
                     total_reward += self.train_env.episode_reward
@@ -277,6 +278,7 @@ class Workspace:
                         self.replay.new_episode(obs)
                         obs, _ = self.train_env.reset()
                     else:
+                        print("Ending replay setup")
                         break
             print(f"Preload of imitation data done. #episode: {self.replay.size()}")
             print(f"#episode from pre-load: {num_episode}, #reward: {total_reward}")
@@ -342,6 +344,7 @@ class Workspace:
 
             if terminal:
                 num_episode += 1
+                print("Episode ", num_episode)
                 if success:
                     num_success += 1
                 total_reward += self.train_env.episode_reward

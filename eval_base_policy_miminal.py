@@ -3,18 +3,18 @@ import torch
 import numpy as np
 from lerobot.common.envs.utils import preprocess_observation
 
-from env.pusht_wrapper import PushtWrapper
+from env.pusht_image_wrapper import PushtImageWrapper
 
 
 def main():
-    env = PushtWrapper(obs_type="environment_state_agent_pos", render_mode="human", env_action_scale=8)
+    env = PushtImageWrapper(obs_type="pixels_agent_pos", render_mode="rgb_array", env_action_scale=8)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     num_success = 0
     num_episodes = 50
     for _ in range(num_episodes):
         obs, info = env.reset()
         for _ in range(300):
-            sample_action = np.array([1, -1])
+            sample_action = np.array([0, 0])
             sample_action = torch.from_numpy(sample_action).float().to(device)
             obs, reward, terminal, success, info = env.step(sample_action)
             if reward > 0:
