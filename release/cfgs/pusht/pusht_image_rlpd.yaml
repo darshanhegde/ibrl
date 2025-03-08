@@ -1,0 +1,27 @@
+task_name: "Push-T-Image"
+episode_length: 300
+stddev_max: 0.1
+use_state: 0
+state_stack: 3
+mix_rl_rate: 0.5
+preload_num_data: 10
+num_warm_up_episode: 10
+num_train_step: 500000
+replay_buffer_size: 20
+use_wb: 1
+mp_eval: 0
+log_per_step: 10000
+num_eval_episode: 200
+num_critic_update: 5
+save_dir: exps/rl/push_t_image_rlpd_scale_16
+q_agent:
+  act_method: "rl"
+  enc_type: "resnet"
+  use_prop: 1
+  state_critic:
+    num_q: 5
+    layer_norm: 1
+    hidden_dim: 1024
+  state_actor:
+    hidden_dim: 1024
+    dropout: 0
