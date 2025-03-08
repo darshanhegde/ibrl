@@ -3,6 +3,7 @@ import numpy as np
 from common_utils import Recorder, Stopwatch
 from common_utils import ibrl_utils as utils
 from env.robosuite_wrapper import PixelRobosuite
+from env.pusht_wrapper import PushtWrapper
 
 
 def run_eval(
@@ -19,7 +20,8 @@ def run_eval(
     stopwatch = Stopwatch()
     recorder = None if record_dir is None else Recorder(record_dir)
 
-    env = PixelRobosuite(**env_params)
+    # env_params["render_mode"] = "human"
+    env = PushtWrapper(**env_params)
     with torch.no_grad(), utils.eval_mode(agent):
         for episode_idx in range(num_game):
             step = 0
@@ -29,6 +31,7 @@ def run_eval(
                 obs, image_obs = env.reset()
 
             terminal = False
+            accum_success = False
             while not terminal:
                 if recorder is not None:
                     recorder.add(image_obs)
@@ -36,11 +39,15 @@ def run_eval(
                 with stopwatch.time(f"act"):
                     action = agent.act(obs, eval_mode=eval_mode)
 
+                # print("Residual RL action:", action)
                 with stopwatch.time("step"):
-                    obs, reward, terminal, _, image_obs = env.step(action)
+                    obs, reward, terminal, success, image_obs = env.step(action)
 
+                accum_success = accum_success or success 
                 rewards.append(reward)
                 step += 1
+
+                # env.render()
 
             if verbose:
                 print(
@@ -48,7 +55,7 @@ def run_eval(
                     f"reward: {np.sum(rewards)}, len: {env.time_step}"
                 )
 
-            scores.append(np.sum(rewards))
+            scores.append(accum_success)
             if scores[-1] > 0:
                 lens.append(env.time_step)
 
@@ -70,6 +77,7 @@ if __name__ == "__main__":
     import common_utils
     import train_bc
     import train_rl
+    import train_residual_rl
     from multi_process_eval import run_eval as mp_run_eval
     import rich.traceback
 
@@ -109,7 +117,7 @@ if __name__ == "__main__":
         if args.mode == "bc":
             agent, _, env_params = train_bc.load_model(weight, "cuda")
         elif args.mode == "rl":
-            agent, _, env_params = train_rl.load_model(weight, "cuda")
+            agent, _, env_params = train_residual_rl.load_model(weight, "cuda")
         else:
             assert False, f"unsupported mode: {args.mode}"
 

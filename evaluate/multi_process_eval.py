@@ -11,6 +11,7 @@ if mp.get_start_method(allow_none=True) != "spawn":
 import common_utils
 from common_utils import ibrl_utils as utils
 from env.robosuite_wrapper import PixelRobosuite
+from env.pusht_wrapper import PushtWrapper
 
 
 class EvalProc:
@@ -23,19 +24,20 @@ class EvalProc:
         self.recv_queue = mp.Queue()
 
     def start(self):
-        env = PixelRobosuite(**self.env_params)
+        # env = PixelRobosuite(**self.env_params)
+        env = PushtWrapper(**self.env_params)
 
         results = {}
         for seed in self.seeds:
             np.random.seed(seed)
-            obs, _ = env.reset()
+            obs, info = env.reset()
             success = False
             while not env.terminal:
                 # NOTE: obs["obs"] should be a cpu tensor because it
                 # is more complicated to move cuda tensors around.
-                self.send_queue.put((self.process_id, obs))
+                self.send_queue.put((self.process_id, obs, info))
                 action = self.recv_queue.get()
-                obs, _, _, success, _ = env.step(action)
+                obs, _, _, success, info = env.step(action)
 
             results[seed] = float(success)
 

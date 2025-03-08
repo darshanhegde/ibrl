@@ -14,7 +14,10 @@ Implementation of _Imitation Bootstrapped Reinforcement Learning (IBRL)_ and bae
 ### Clone the repo.
 We need `--recursive` to get the correct submodule
 ```shell
-git clone --recursive https://github.com/hengyuan-hu/ibrl.git
+mkdir -p cs381
+cd cs381
+git clone --recursive git@github.com:darshanhegde/ibrl.git
+git checkout feat-residual-rl
 ```
 
 ### Install dependencies
@@ -28,7 +31,7 @@ Extract the downloaded mujoco210 directory into `~/.mujoco/mujoco210`.
 
 First create a conda env with name `ibrl`.
 ```shell
-conda create --name ibrl python=3.9
+conda create --name ibrl_v2 python=3.10
 ```
 
 Then, source `set_env.sh` to activate `ibrl` conda env. It also setup several important paths such as `MUJOCO_PY_MUJOCO_PATH` and add current project folder to `PYTHONPATH`.
@@ -59,6 +62,46 @@ cd common_utils
 make
 ```
 
+### Clone and Install LeRobot in the same Conda Environment
+
+Using the same environment `ibrl_v2` install dependecies of lerobot at a specific commit. 
+
+```
+cd cs381
+git clone https://github.com/huggingface/lerobot
+cd lerobot
+git checkout cc2f6e74047bd65db0f9705fa602636b625bc28c
+```
+
+Install the dependies
+```
+cd cs381/lerobot
+pip install -e .
+pip install -e ".[aloha, pusht]"
+```
+
+
+# Training residual policy
+
+```
+python train_residual_rl.py --config_path release/cfgs/pusht/pusht_keypoints_rlpd.yaml
+```
+
+
+# Evaluating baseline policy
+
+```
+python eval_base_policy_miminal.py 
+```
+
+
+# Evaluating residual trained policy
+
+```
+python evaluate/eval.py --folder exps/rl/run1 --mode rl --mp 0 --num_game 200
+```
+
+
 ### Trouble Shooting
 Later when running the training commands, if we encounter the following error
 ```shell
@@ -75,6 +118,12 @@ ln -sf /lib/x86_64-linux-gnu/libstdc++.so.6 PATH_TO_CONDA_ENV/bin/../lib/libstdc
 ## Reproduce Results
 
 Remember to run `source set_env.sh`  once per shell before running any script from this repo.
+
+## Residual RL Training on Push-T Keypoints Environment
+
+```
+python train_residual_rl.py --config_path release/cfgs/pusht/pusht_keypoints_rlpd.yaml 
+```
 
 
 ### Download data and BC models
