@@ -1,8 +1,9 @@
 import torch
 import numpy as np
-from common_utils import Recorder, Stopwatch
-from common_utils import ibrl_utils as utils
-from env.robosuite_wrapper import PixelRobosuite
+
+#from .common_utils import Recorder, Stopwatch
+#from .common_utils import ibrl_utils as utils
+#from env.robosuite_wrapper import PixelRobosuite
 from env.pusht_wrapper import PushtWrapper
 
 
@@ -17,31 +18,35 @@ def run_eval(
 ) -> list[float]:
     scores = []
     lens = []
-    stopwatch = Stopwatch()
-    recorder = None if record_dir is None else Recorder(record_dir)
+    verbose = True 
+    #stopwatch = Stopwatch()
+    #recorder = None if record_dir is None else Recorder(record_dir)
+
+    agent.training = False
+    agent.actor.training = False
 
     # env_params["render_mode"] = "human"
     env = PushtWrapper(**env_params)
-    with torch.no_grad(), utils.eval_mode(agent):
+    with torch.no_grad():
         for episode_idx in range(num_game):
             step = 0
             rewards = []
             np.random.seed(seed + episode_idx)
-            with stopwatch.time("reset"):
-                obs, image_obs = env.reset()
+            #with stopwatch.time("reset"):
+            obs, image_obs = env.reset()
 
             terminal = False
             accum_success = False
             while not terminal:
-                if recorder is not None:
-                    recorder.add(image_obs)
+                #if recorder is not None:
+                #    recorder.add(image_obs)
 
-                with stopwatch.time(f"act"):
-                    action = agent.act(obs, eval_mode=eval_mode)
+                #with stopwatch.time(f"act"):
+                action = agent.act(obs, eval_mode=eval_mode)
 
-                # print("Residual RL action:", action)
-                with stopwatch.time("step"):
-                    obs, reward, terminal, success, image_obs = env.step(action)
+                #print(" - Residual RL action:", action)
+                #with stopwatch.time("step"):
+                obs, reward, terminal, success, image_obs = env.step(action)
 
                 accum_success = accum_success or success 
                 rewards.append(reward)
@@ -59,13 +64,13 @@ def run_eval(
             if scores[-1] > 0:
                 lens.append(env.time_step)
 
-            if recorder is not None:
-                recorder.save(f"episode{episode_idx}")
+            #if recorder is not None:
+            #recorder.save(f"episode{episode_idx}")
 
     if verbose:
         print(f"num game: {len(scores)}, seed: {seed}, score: {np.mean(scores)}")
         print(f"average steps for success games: {np.mean(lens)}")
-        stopwatch.summary()
+        # stopwatch.summary()
 
     return scores
 
@@ -78,7 +83,7 @@ if __name__ == "__main__":
     import train_bc
     import train_rl
     import train_residual_rl
-    from multi_process_eval import run_eval as mp_run_eval
+    #from multi_process_eval import run_eval as mp_run_eval
     import rich.traceback
 
     # make logging more beautiful
@@ -136,20 +141,15 @@ if __name__ == "__main__":
     all_scores = []
     for weight, agent, env_params in eval_items:
         t = time.time()
-        if args.mp >= 1:
-            assert args.record_dir is None
-            scores = mp_run_eval(
-                env_params, agent, args.num_game, args.mp, args.seed, verbose=args.verbose
-            )
-        else:
-            scores = run_eval(
-                env_params,
-                agent,
-                args.num_game,
-                args.seed,
-                args.record_dir,
-                verbose=args.verbose,
-            )
+
+        scores = run_eval(
+            env_params,
+            agent,
+            args.num_game,
+            args.seed,
+            args.record_dir,
+            verbose=args.verbose,
+        )
         all_scores.append(scores)
         print(f"weight: {weight}")
         print(f"score: {np.mean(scores)}, time: {time.time() - t:.1f}")

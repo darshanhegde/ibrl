@@ -3,7 +3,7 @@ project(rela)
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra -Wno-register -fPIC -Wfatal-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
 
 execute_process(
   COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/get_pybind_flags.py
@@ -24,7 +24,7 @@ execute_process(
 )
 list(APPEND CMAKE_PREFIX_PATH ${TorchPath})
 find_package(Torch REQUIRED)
-set(TORCH_PYTHON_LIBRARIES "${TorchPath}/lib/libtorch_python.so")
+set(TORCH_PYTHON_LIBRARIES "${TorchPath}/lib/torch_python.lib")
 
 message("---------------------")
 message(${TorchPath})
