@@ -16,7 +16,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     mcfg = MultiFcQConfig(hidden_dim=1024, num_q=5, layer_norm=1)
-    mfcfg = FcActorConfig(hidden_dim=1024)
+    mfcfg = FcActorConfig(hidden_dim=1024, dropout=0.5)
 
     agent_cfg = QAgentConfig(enc_type="vit", state_critic=mcfg, state_actor=mfcfg)
     print(agent_cfg)
@@ -40,7 +40,7 @@ def main():
         agent_cfg,
     )
 
-    path = "exps/rl/push_t_keypoints_rlpd_scale_4_max_dev_1/latest.pt"
+    path = "exps/rl/push_t_keypoints_ibrl_scale_4_max_dev_1/latest.pt"
     print(f"loading loading pretrained agent from {path}")
     critic_states = copy.deepcopy(agent.critic.state_dict())
     agent.load_state_dict(torch.load(path))
@@ -49,30 +49,33 @@ def main():
     agent.critic_target.load_state_dict(critic_states)
 
     agent.actor.training = False
+    target = torch.tensor([-1., -1.])
 
     num_success = 0
-    num_episodes = 50
-    for _ in range(num_episodes):
+    num_episodes = 200
+    for j in range(num_episodes):
         obs, info = env.reset()
-        for _ in range(300):
-            sample_action = np.array([1, -1])
+        for i in range(300):
+            sample_action = np.array([0, 0])
             sample_action = torch.from_numpy(sample_action).float().to(device)
 
-            agent.training = False
-            agent.actor.training = False
-            action = agent.act(obs, eval_mode=True)
-            print(f"Residual Action: {action}")
+            # agent.training = False
+            # agent.actor.training = False
+            # action = agent.act(obs, eval_mode=True)
+            # if torch.equal(action, target):
+            #     print(f"Action: {action}")
+            # #print(f" - Action: {action} | Obs: {obs}")
 
             obs, reward, terminal, success, info = env.step(sample_action)
             if reward > 0:
-                print("Success")
+                print(f"{j}: Success")
             env.render()
 
             if terminal:
                 if success:
                     num_success += success
                 else: 
-                    print("Failed")
+                    print(f"{j}: Failed")
                 break
             
     print("Percent success: ", num_success / num_episodes)

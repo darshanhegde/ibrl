@@ -41,7 +41,7 @@ class MainConfig(common_utils.RunConfig):
     nstep: int = 3
     discount: float = 0.99
     replay_buffer_size: int = 500
-    batch_size: int = 256
+    batch_size: int = 1536
     num_critic_update: int = 1
     update_freq: int = 2
     bc_policy: str = ""
@@ -59,7 +59,7 @@ class MainConfig(common_utils.RunConfig):
     add_bc_loss: int = 0
     # others
     env_reward_scale: float = 1
-    env_action_scale: float = 16
+    env_action_scale: float = 4
     num_warm_up_episode: int = 50
     num_eval_episode: int = 10
     save_per_success: int = -1
@@ -367,8 +367,9 @@ class Workspace:
         self.agent.set_stats(stat)
         saver = common_utils.TopkSaver(save_dir=self.work_dir, topk=5)
 
-        if self.replay.num_episode < self.cfg.num_warm_up_episode:
-            self.warm_up()
+        print(f"Skipping warmup")
+        # # if self.replay.num_episode < self.cfg.num_warm_up_episode:
+        # #     self.warm_up()
 
         stopwatch = common_utils.Stopwatch()
         obs, info = self.train_env.reset()
@@ -558,4 +559,5 @@ if __name__ == "__main__":
     os.environ["MUJOCO_GL"] = "egl"
     torch.backends.cudnn.allow_tf32 = True  # type: ignore
     torch.backends.cudnn.benchmark = True  # type: ignore
+    wandb.login(key="9b8a88d4bd9f7e5d7d9025d89980f8a225140b33")
     main()

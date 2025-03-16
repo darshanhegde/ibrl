@@ -15,13 +15,14 @@ log_per_step: 10000
 num_eval_episode: 200
 num_critic_update: 5
 env_action_scale: 4
-save_dir: exps/rl/push_t_keypoints_rlpd_scale_4_max_dev_1
+save_dir: exps/rl/push_t_keypoints_ibrl_scale_4_max_dev_1
 q_agent:
-  act_method: "rl"
+  act_method: "ibrl"
+  use_prop: 1
   state_critic:
     num_q: 5
     layer_norm: 1
     hidden_dim: 1024
   state_actor:
     hidden_dim: 1024
-    dropout: 0
+    dropout: 0.5

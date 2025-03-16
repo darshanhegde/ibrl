@@ -2,7 +2,7 @@ from typing import Optional
 from dataclasses import dataclass, field
 import copy
 from contextlib import contextmanager
-
+import numpy as np
 import torch
 import torch.nn as nn
 import common_utils
@@ -260,15 +260,19 @@ class QAgent(nn.Module):
         if eval_mode:
             assert not actor.training
 
-        assert len(self.bc_policies) == 1
-        bc_policy = self.bc_policies[0]
-        bc_action = bc_policy.act(obs, cpu=False)
+        #assert len(self.bc_policies) == 1
+        #bc_policy = self.bc_policies[0]
+        #bc_action = bc_policy.act(obs, cpu=False)
 
         rl_dist: utils.TruncatedNormal = actor(obs, stddev)
         if eval_mode:
             rl_action = rl_dist.mean
         else:
             rl_action = rl_dist.sample(clip)
+
+        batch_size = rl_action.shape[0]  # Get dynamic batch size
+        bc_action = torch.tensor([0, 0], dtype=torch.float32, device="cuda:0")  # [2]
+        bc_action = bc_action.unsqueeze(0).expand(batch_size, -1)  # [batch_size, 2]
 
         rl_bc_actions = torch.stack([rl_action, bc_action], dim=1)
         bsize, num_action, _ = rl_bc_actions.size()
@@ -339,9 +343,13 @@ class QAgent(nn.Module):
         if eval_mode:
             assert not actor.training
 
-        assert len(self.bc_policies) == 1
-        bc_policy = self.bc_policies[0]
-        bc_action = bc_policy.act(obs, cpu=False)
+        #assert len(self.bc_policies) == 1
+        #bc_policy = self.bc_policies[0]
+        #bc_action = bc_policy.act(obs, cpu=False)
+
+        bc_action = np.array([0, 0])
+        bc_action = torch.from_numpy(bc_action).float()
+
 
         rl_dist: utils.TruncatedNormal = actor(obs, stddev)
         if eval_mode:
